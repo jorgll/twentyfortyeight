@@ -7,17 +7,14 @@ import * as _ from 'lodash';
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.css']
 })
-
 export class BoardComponent implements OnInit {
+  rows: number[][];
 
-    rows: number[][];
+  constructor(private gameService: GameService) {}
 
-    constructor(private gameService: GameService) { 
-    }
-
-    ngOnInit(): void {
+  ngOnInit(): void {
     console.log('lodash version: ', _.VERSION);
-    this.rows = this.gameService.getInitialBoardState();
+    this.rows = this.gameService.startNewGame();
   }
 
 }

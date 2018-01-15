@@ -3,8 +3,8 @@
     <div class="grid-row" *ngFor="let row of rows">
       <div class="grid-cell" *ngFor="let col of row">
         <div class="tile">
-          <div class="tile-inner">
-            {{col}}
+          <div class="tile tile-inner tile-{{col}}" *ngIf='col !== 0'>
+              {{col}}
           </div>
         </div>
       </div>

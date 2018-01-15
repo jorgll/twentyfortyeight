@@ -6,14 +6,9 @@ import { BoardComponent } from './board.component';
 import { GameService } from './game.service';
 
 @NgModule({
-  declarations: [
-    AppComponent,
-    BoardComponent
-  ],
-  imports: [
-    BrowserModule
-  ],
+  declarations: [AppComponent, BoardComponent],
+  imports: [BrowserModule],
   providers: [GameService],
   bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {}

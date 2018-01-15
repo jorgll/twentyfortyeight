@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { GameService } from './game.service';
 import * as _ from 'lodash';
 
@@ -17,4 +17,28 @@ export class BoardComponent implements OnInit {
     this.rows = this.gameService.startNewGame();
   }
 
+  @HostListener('window:keydown', ['$event'])
+  keyboardInput(event: KeyboardEvent) {
+    switch (event.keyCode) {
+      case 38:
+        console.log('Move up');
+        this.gameService.moveUp();
+        break;
+      case 40:
+        console.log('Move down');
+        this.gameService.moveDown();
+        break;
+      case 37:
+        console.log('Move left');
+        this.gameService.moveLeft();
+        break;
+      case 39:
+        console.log('Move right');
+        this.gameService.moveRight();
+        break;
+      default:
+        // Ignore all other inputs
+        break;
+    }
+  }
 }

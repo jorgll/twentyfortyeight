@@ -20,6 +20,10 @@ export class BoardComponent implements OnInit {
   @HostListener('window:keydown', ['$event'])
   keyboardInput(event: KeyboardEvent) {
     switch (event.keyCode) {
+    case 32:
+        console.log('Space (Add tile)');
+        this.gameService.addTile();
+        break;
       case 38:
         console.log('Move up');
         this.gameService.moveUp();

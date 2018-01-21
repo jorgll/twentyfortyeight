@@ -25,19 +25,15 @@ export class BoardComponent implements OnInit {
         this.gameService.addTile();
         break;
       case 38:
-        console.log('Move up');
         this.gameService.moveUp();
         break;
       case 40:
-        console.log('Move down');
         this.gameService.moveDown();
         break;
       case 37:
-        console.log('Move left');
         this.gameService.moveLeft();
         break;
       case 39:
-        console.log('Move right');
         this.gameService.moveRight();
         break;
       default:

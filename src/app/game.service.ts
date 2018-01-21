@@ -12,10 +12,6 @@ export class GameService {
 
   constructor(private logger: LoggerService) {}
 
-  initTestCase(): number[][] {
-    return [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 2], [0, 4, 32, 4]];
-  }
-
   startNewGame(): number[][] {
     const maxInitialTileValue: number = 8;
     const maxInitialTileCount: number = 4;
@@ -212,11 +208,18 @@ export class GameService {
           }
         }
       }
-      if (moveCount > 0) {
-        console.log('moveCount: ' + moveCount);
-        this.logger.logState(this.boardState);
-        this.addTile();
-      }
     }
+    if (moveCount > 0) {
+      console.log('moveCount: ' + moveCount);
+      this.logger.logState(this.boardState);
+      this.addTile();
+    }    
   }
+
+  // Used to force a test case for debug purposes
+  // Set testOverride = true to get the board to read this config
+  initTestCase(): number[][] {
+    return [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 2], [0, 4, 32, 4]];
+  }
+
 }

@@ -41,29 +41,14 @@ export class GameService {
 
   // Method guarantees it will add a single tile
   // If will keep trying until it does
-  addTile(max?: number) {
+  addTile() {
     // Check for lose condition
     if (this.tileCount >= this.boardSize * this.boardSize) {
       console.log('You lose');
       return;
     }
 
-    // Get the exponent to generate a new tile value
-    let pow: number;
-    if (max) {
-      pow = (Math.log(max) / Math.LN2) - 2;
-    } else {
-      pow = Math.log(this.maxTile) / Math.LN2;
-    }
-    if (pow < 2) {
-      pow = 2;
-    }
-
-    // Get the value that corresponds to that exponent
-    let value: number = 1;
-    while (value <= 1) {
-      value = Math.pow(2, _.random(pow));
-    }
+    let value: number = 2
 
     // Find an empty spot on the board
     let row: number;

@@ -6,7 +6,6 @@ import { LoggerService } from './logger.service';
 export class GameService {
   boardState: number[][];
   boardSize: number = 4; // NxN
-  maxTile: number = 0;
   tileCount = 0;
   testOverride = false;
 
@@ -28,7 +27,7 @@ export class GameService {
       });
       // Seed initial values
       for (let i = 0; i < maxInitialTileCount; i++) {
-        this.addTile(maxInitialTileValue);
+        this.addTile();
       }
     }
 
@@ -61,10 +60,6 @@ export class GameService {
     // Place tile
     console.log('Adding tile ' + value + ' at [' + row + ', ' + column + ']');
     this.boardState[row][column] = value;
-    if (value > this.maxTile) {
-      this.maxTile = value;
-      console.log('New maxTile: ' + this.maxTile);
-    }
     this.tileCount++;
     this.logger.logState(this.boardState);
   }
@@ -76,10 +71,6 @@ export class GameService {
   }
 
   combineTiles(x1: number, y1: number, x2: number, y2: number, value: number) {
-    if (value * 2 > this.maxTile) {
-      this.maxTile = value * 2;
-      console.log('New maxTile: ' + this.maxTile);
-    }
     this.boardState[x1][y1] = 0;
     this.boardState[x2][y2] = value + value;
     this.tileCount--;

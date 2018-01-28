@@ -1,10 +1,10 @@
 <div class="game-container">
   <div class="grid-container">
-    <div class="grid-row" *ngFor="let row of rows">
-      <div class="grid-cell" *ngFor="let col of row">
+    <div class="grid-row" *ngFor="let row of tiles">
+      <div class="grid-cell" *ngFor="let tile of row">
         <div class="tile">
-          <div class="tile tile-inner tile-{{col}}" *ngIf='col !== 0'>
-              {{col}}
+          <div class="tile tile-inner tile-{{tile.value}}" *ngIf='tile.value !== 0'>
+              {{tile.value}}
           </div>
         </div>
       </div>

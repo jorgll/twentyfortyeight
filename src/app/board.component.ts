@@ -1,20 +1,21 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { GameService } from './game.service';
 import * as _ from 'lodash';
-
+import { Tile } from './tile.model';
+ 
 @Component({
   selector: 'board',
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.css']
 })
 export class BoardComponent implements OnInit {
-  rows: number[][];
+  tiles: Tile[][];
 
   constructor(private gameService: GameService) {}
 
   ngOnInit(): void {
     console.log('lodash version: ', _.VERSION);
-    this.rows = this.gameService.startNewGame();
+    this.tiles = this.gameService.startNewGame();
   }
 
   @HostListener('window:keydown', ['$event'])

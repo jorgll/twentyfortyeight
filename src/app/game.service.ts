@@ -1,201 +1,230 @@
 import { Injectable } from '@angular/core';
 import * as _ from 'lodash';
 import { LoggerService } from './logger.service';
+import { Tile } from './tile.model';
+import { empty } from 'rxjs/Observer';
 
 @Injectable()
 export class GameService {
-  boardState: number[][];
+  board: Tile[][];  
   boardSize: number = 4; // NxN
   tileCount = 0;
   testOverride = false;
 
   constructor(private logger: LoggerService) {}
 
-  startNewGame(): number[][] {
-    const maxInitialTileValue: number = 8;
-    const maxInitialTileCount: number = 4;
+  startNewGame(): Tile[][] {
 
     if (this.testOverride) {
-      // Initialize test board
-      this.boardState = this.initTestCase();
+      this.initializeTestBoard();
     } else {
-      // Initialize an empty board
-      this.boardState = _.range(this.boardSize).map(() => {
-        return _.range(this.boardSize).map(() => {
-          return 0;
-        });
-      });
-      // Seed initial values
-      for (let i = 0; i < maxInitialTileCount; i++) {
-        this.addTile();
-      }
+      this.initializeEmptyBoard();
+      this.seedInitialValues();
     }
 
     console.log('*******************************************************************');
     console.log('Initial board state set up');
-    console.log('*******************************************************************');
-    this.logger.logState(this.boardState);
-    return this.boardState;
+    this.logger.logState(this.board);
+
+    return this.board;
   }
 
-  // Method guarantees it will add a single tile
-  // If will keep trying until it does
+  initializeEmptyBoard()
+  {
+    this.board = [];
+    for (let i = 0; i < this.boardSize; i++) {
+      this.board[i] = [];
+      for (let j = 0; j < this.boardSize; j++) {
+        this.board[i][j] = new Tile (i, j, 0);
+      }
+    }
+  }
+
+  seedInitialValues()
+  {
+    const maxInitialTileCount: number = 4;
+
+    for (let i = 0; i < maxInitialTileCount; i++) {
+      this.addTile();
+    }
+  }
+
+  // Method guarantees it will add a single tile.
+  // It will keep trying until it does.
   addTile() {
-    // Check for lose condition
-    if (this.tileCount >= this.boardSize * this.boardSize) {
+    if (this.hasLost()) {
       console.log('You lose');
       return;
     }
 
     let value: number = 2
+    let emptySpot = this.findEmptySpot();
+    this.placeTile(new Tile(emptySpot.row, emptySpot.column, value));
+  }
 
-    // Find an empty spot on the board
-    let row: number;
-    let column: number;
+  hasLost(): boolean {
+      // Check for lose condition
+      if (this.tileCount >= this.boardSize * this.boardSize) {
+        return true;
+      }
+      return false;
+  }
+
+  findEmptySpot(): Tile {
+    let emptySpot = new Tile(0, 0);
+
     do {
-      row = _.random(this.boardSize - 1);
-      column = _.random(this.boardSize - 1);
-    } while (this.boardState[row][column] !== 0);
+      emptySpot.row = _.random(this.boardSize - 1);
+      emptySpot.column = _.random(this.boardSize - 1);
+    } while (this.board[emptySpot.row][emptySpot.column].value !== 0);
+    
+    return emptySpot;
+  }
 
-    // Place tile
-    console.log('Adding tile ' + value + ' at [' + row + ', ' + column + ']');
-    this.boardState[row][column] = value;
+  placeTile(t: Tile) {
+    console.log('Adding tile ' + t.value + ' at [' + t.row + ', ' + t.column + ']');
+    this.board[t.row][t.column].value = t.value;
     this.tileCount++;
-    this.logger.logState(this.boardState);
+    this.logger.logState(this.board);
   }
 
-  moveTile(x1: number, y1: number, x2: number, y2: number, value: number) {
-    this.boardState[x1][y1] = 0;
-    this.boardState[x2][y2] = value;
-    console.log('Moving tile ' + value + ' from [' + x1 + ', ' + y1 + '] to ' + '[' + x2 + ', ' + y2 + ']');
+  moveTile(from: Tile, to: Tile) {
+    this.board[from.row][from.column].value = 0;
+    this.board[to.row][to.column].value = from.value;
+    console.log('Moving tile ' + from.value + ' from [' + from.row + ', ' + from.column + '] to ' + '[' + to.row + ', ' + to.column + ']');
   }
 
-  combineTiles(x1: number, y1: number, x2: number, y2: number, value: number) {
-    this.boardState[x1][y1] = 0;
-    this.boardState[x2][y2] = value + value;
+  combineTiles(from: Tile, to: Tile) {
+    this.board[from.row][from.column].value = 0;
+    this.board[to.row][to.column].value = from.value + from.value;
     this.tileCount--;
     console.log('*******************************************************************');
-    console.log('Combining tiles ' + value + ' at [' + x1 + ', ' + y1 + '] with [' + x2 + ', ' + y2 + ']');
-    this.logger.logState(this.boardState);
-    console.log('*******************************************************************');
+    console.log('Combining tiles ' + from.value + ' at [' + from.row + ', ' + from.column + '] with [' + to.row + ', ' + to.column + ']');
+    this.logger.logState(this.board);
   }
 
   moveUp(): void {
     console.log('***** moveUp *****');
-    this.logger.logState(this.boardState);
+    this.logger.logState(this.board);
     let moveCount: number = 0;
+
     for (let i = 0; i < this.boardSize; i++) {
       for (let j = 0; j < this.boardSize; j++) {
-        let currentValue = this.boardState[i][j];
+        let currentValue = this.board[i][j].value;
         if (currentValue !== 0) {
           for (let k = i - 1; k >= 0; k--) {
-            if (this.boardState[k][j] === currentValue) {
-              this.combineTiles(k + 1, j, k, j, currentValue);
+            if (this.board[k][j].value === currentValue) {
+              this.combineTiles(new Tile(k + 1, j, currentValue), new Tile (k, j));
               moveCount++;
-            } else if (this.boardState[k][j] === 0) {
-              this.moveTile(k + 1, j, k, j, currentValue);
+            } else if (this.board[k][j].value === 0) {
+              this.moveTile(new Tile(k + 1, j, currentValue), new Tile(k, j));
               moveCount++;
             }
-            currentValue = this.boardState[k][j];            
+            currentValue = this.board[k][j].value;            
           }
         }
       }
     }
     if (moveCount > 0) {
       console.log('moveCount: ' + moveCount);
-      this.logger.logState(this.boardState);
+      this.logger.logState(this.board);
       this.addTile();
     }
   }
 
   moveDown(): void {
     console.log('***** moveDown *****');
-    this.logger.logState(this.boardState);
+    this.logger.logState(this.board);
     let moveCount: number = 0;
     for (let i = this.boardSize - 1; i >= 0; i--) {
       for (let j = this.boardSize - 1; j >= 0; j--) {
-        let currentValue = this.boardState[i][j];
+        let currentValue = this.board[i][j].value;
         if (currentValue !== 0) {
           for (let k = i + 1; k < this.boardSize; k++) {
-            if (this.boardState[k][j] === currentValue) {
-              this.combineTiles(k - 1, j, k, j, currentValue);
+            if (this.board[k][j].value === currentValue) {
+              this.combineTiles(new Tile(k - 1, j, currentValue), new Tile(k, j));
               moveCount++;
-            } else if (this.boardState[k][j] === 0) {
-              this.moveTile(k - 1, j, k, j, currentValue);
+            } else if (this.board[k][j].value === 0) {
+              this.moveTile(new Tile(k - 1, j, currentValue), new Tile(k, j));
               moveCount++;
             }
-            currentValue = this.boardState[k][j];
+            currentValue = this.board[k][j].value;
           }
         }
       }
     }
     if (moveCount > 0) {
       console.log('moveCount: ' + moveCount);
-      this.logger.logState(this.boardState);
+      this.logger.logState(this.board);
       this.addTile();
     }
   }
 
   moveLeft(): void {
     console.log('***** moveLeft *****');
-    this.logger.logState(this.boardState);
+    this.logger.logState(this.board);
     let moveCount: number = 0;
     for (let i = 0; i < this.boardSize; i++) {
       for (let j = 0; j < this.boardSize; j++) {
-        let currentValue = this.boardState[i][j];
+        let currentValue = this.board[i][j].value;
         if (currentValue !== 0) {
           for (let k = j - 1; k >= 0; k--) {
-            if (this.boardState[i][k] === currentValue) {
-              this.combineTiles(i, k + 1, i, k, currentValue);
+            if (this.board[i][k].value === currentValue) {
+              this.combineTiles(new Tile(i, k + 1, currentValue), new Tile(i, k));
               moveCount++;
-            } else if (this.boardState[i][k] === 0) {
-              this.moveTile(i, k + 1, i, k, currentValue);
+            } else if (this.board[i][k].value === 0) {
+              this.moveTile(new Tile(i, k + 1, currentValue), new Tile(i, k));
               moveCount++;
             }
-            currentValue = this.boardState[i][k];
+            currentValue = this.board[i][k].value;
           }
         }
       }
     }
     if (moveCount > 0) {
       console.log('moveCount: ' + moveCount);
-      this.logger.logState(this.boardState);
+      this.logger.logState(this.board);
       this.addTile();
     }
   }
 
   moveRight(): void {
     console.log('***** moveRight *****');
-    this.logger.logState(this.boardState);
+    this.logger.logState(this.board);
     let moveCount: number = 0;
     for (let i = this.boardSize - 1; i >= 0; i--) {
       for (let j = this.boardSize - 1; j >= 0; j--) {
-        let currentValue = this.boardState[i][j];
+        let currentValue = this.board[i][j].value;
         if (currentValue !== 0) {
           for (let k = j + 1; k < this.boardSize; k++) {
-            if (this.boardState[i][k] === currentValue) {
-              this.combineTiles(i, k - 1, i, k, currentValue);
+            if (this.board[i][k].value === currentValue) {
+              this.combineTiles(new Tile(i, k - 1, currentValue), new Tile(i, k));
               moveCount++;
-            } else if (this.boardState[i][k] === 0) {
-              this.moveTile(i, k - 1, i, k, currentValue);
+            } else if (this.board[i][k].value === 0) {
+              this.moveTile(new Tile(i, k - 1, currentValue), new Tile(i, k));
               moveCount++;
             }
-            currentValue = this.boardState[i][k];
+            currentValue = this.board[i][k].value;
           }
         }
       }
     }
     if (moveCount > 0) {
       console.log('moveCount: ' + moveCount);
-      this.logger.logState(this.boardState);
+      this.logger.logState(this.board);
       this.addTile();
     }    
   }
 
   // Used to force a test case for debug purposes
   // Set testOverride = true to get the board to read this config
-  initTestCase(): number[][] {
-    return [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 2], [0, 4, 32, 4]];
+  initializeTestBoard(): void {
+    this.initializeEmptyBoard();
+
+    this.board[2][3].value = 2;
+    this.board[3][1].value = 4;
+    this.board[3][2].value = 32;
+    this.board[3][3].value = 4;
   }
 
 }

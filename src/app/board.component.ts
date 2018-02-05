@@ -1,6 +1,5 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { GameService } from './game.service';
-import * as _ from 'lodash';
 import { Tile } from './tile.model';
  
 @Component({
@@ -14,7 +13,6 @@ export class BoardComponent implements OnInit {
   constructor(private gameService: GameService) {}
 
   ngOnInit(): void {
-    console.log('lodash version: ', _.VERSION);
     this.tiles = this.gameService.startNewGame();
   }
 
@@ -26,16 +24,16 @@ export class BoardComponent implements OnInit {
         this.gameService.addTile();
         break;
       case 38:
-        this.gameService.moveUp();
+        this.gameService.move(this.gameService.Direction.up);
         break;
       case 40:
-        this.gameService.moveDown();
+        this.gameService.move(this.gameService.Direction.down);
         break;
       case 37:
-        this.gameService.moveLeft();
+        this.gameService.move(this.gameService.Direction.left);
         break;
       case 39:
-        this.gameService.moveRight();
+        this.gameService.move(this.gameService.Direction.right);
         break;
       default:
         // Ignore all other inputs

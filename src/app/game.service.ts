@@ -2,23 +2,31 @@ import { Injectable } from '@angular/core';
 import * as _ from 'lodash';
 import { LoggerService } from './logger.service';
 import { Tile } from './tile.model';
-import { empty } from 'rxjs/Observer';
+
+enum Direction {
+  up,   // 0
+  down, // 1
+  left, // 2
+  right // 3
+}
 
 @Injectable()
 export class GameService {
-  board: Tile[][];  
-  boardSize: number = 4; // NxN
+  board: Tile[][];
+  boardSize = 4; // NxN
   tileCount = 0;
-  testOverride = false;
+  testMode = true;
+  maxInitialTileCount = 4;
+  Direction = Direction;
 
   constructor(private logger: LoggerService) {}
 
   startNewGame(): Tile[][] {
 
-    if (this.testOverride) {
+    this.initializeEmptyBoard();
+    if (this.testMode) {
       this.initializeTestBoard();
     } else {
-      this.initializeEmptyBoard();
       this.seedInitialValues();
     }
 
@@ -29,8 +37,7 @@ export class GameService {
     return this.board;
   }
 
-  initializeEmptyBoard()
-  {
+  initializeEmptyBoard() {
     this.board = [];
     for (let i = 0; i < this.boardSize; i++) {
       this.board[i] = [];
@@ -40,11 +47,8 @@ export class GameService {
     }
   }
 
-  seedInitialValues()
-  {
-    const maxInitialTileCount: number = 4;
-
-    for (let i = 0; i < maxInitialTileCount; i++) {
+  seedInitialValues() {
+    for (let i = 0; i < this.maxInitialTileCount; i++) {
       this.addTile();
     }
   }
@@ -57,8 +61,8 @@ export class GameService {
       return;
     }
 
-    let value: number = 2
-    let emptySpot = this.findEmptySpot();
+    const value = 2;
+    const emptySpot = this.findEmptySpot();
     this.placeTile(new Tile(emptySpot.row, emptySpot.column, value));
   }
 
@@ -71,160 +75,169 @@ export class GameService {
   }
 
   findEmptySpot(): Tile {
-    let emptySpot = new Tile(0, 0);
+    const emptySpot = new Tile(0, 0);
 
     do {
       emptySpot.row = _.random(this.boardSize - 1);
       emptySpot.column = _.random(this.boardSize - 1);
     } while (this.board[emptySpot.row][emptySpot.column].value !== 0);
-    
     return emptySpot;
   }
 
-  placeTile(t: Tile) {
-    console.log('Adding tile ' + t.value + ' at [' + t.row + ', ' + t.column + ']');
+  placeTile(t: Tile): void {
+    console.log('    Adding tile ', t);
     this.board[t.row][t.column].value = t.value;
     this.tileCount++;
-    this.logger.logState(this.board);
   }
 
-  moveTile(from: Tile, to: Tile) {
-    this.board[from.row][from.column].value = 0;
-    this.board[to.row][to.column].value = from.value;
-    console.log('Moving tile ' + from.value + ' from [' + from.row + ', ' + from.column + '] to ' + '[' + to.row + ', ' + to.column + ']');
+  moveTile(from: Tile, to: Tile): void {
+    console.log('    Moving tile ', from, to);
+    to.value = from.value;
+    from.value = 0;
   }
 
-  combineTiles(from: Tile, to: Tile) {
-    this.board[from.row][from.column].value = 0;
-    this.board[to.row][to.column].value = from.value + from.value;
+  combineTiles(from: Tile, to: Tile): void {
+    console.log('    Combining to make new tile ', from, to);
+    to.value = from.value + from.value;
+    from.value = 0;
+    to.merged = true;
     this.tileCount--;
-    console.log('*******************************************************************');
-    console.log('Combining tiles ' + from.value + ' at [' + from.row + ', ' + from.column + '] with [' + to.row + ', ' + to.column + ']');
     this.logger.logState(this.board);
   }
 
-  moveUp(): void {
-    console.log('***** moveUp *****');
-    this.logger.logState(this.board);
-    let moveCount: number = 0;
-
-    for (let i = 0; i < this.boardSize; i++) {
-      for (let j = 0; j < this.boardSize; j++) {
-        let currentValue = this.board[i][j].value;
-        if (currentValue !== 0) {
-          for (let k = i - 1; k >= 0; k--) {
-            if (this.board[k][j].value === currentValue) {
-              this.combineTiles(new Tile(k + 1, j, currentValue), new Tile (k, j));
-              moveCount++;
-            } else if (this.board[k][j].value === 0) {
-              this.moveTile(new Tile(k + 1, j, currentValue), new Tile(k, j));
-              moveCount++;
-            }
-            currentValue = this.board[k][j].value;            
-          }
+  moveOneStep(current: Tile, direction: Direction): Tile {
+    let result: Tile = null;
+    switch (direction) {
+      case Direction.up:
+        if (this.isValidTile(current, -1, 0)) {
+          result = this.board[current.row - 1][current.column];
         }
-      }
+        break;
+      case Direction.down:
+        if (this.isValidTile(current, +1, 0)) {
+          result = this.board[current.row + 1][current.column];
+        }
+        break;
+      case Direction.left:
+        if (this.isValidTile(current, 0, -1)) {
+          result = this.board[current.row][current.column - 1];
+        }
+        break;
+      case Direction.right:
+        if (this.isValidTile(current, 0, +1)) {
+          result = this.board[current.row][current.column + 1];
+        }
+        break;
+      default:
+        break;
     }
-    if (moveCount > 0) {
-      console.log('moveCount: ' + moveCount);
-      this.logger.logState(this.board);
-      this.addTile();
+    if (result) {
+      console.log('    moveOneStep, direction: ' + direction);
+    }
+    return result;
+  }
+
+  isValidTile(tile: Tile, rowDelta?: number, columnDelta?: number): boolean {
+    if (!tile) {
+      return false;
+    }
+
+    const max: number = this.boardSize - 1;
+    const min = 0;
+    const newRow = rowDelta ? tile.row + rowDelta : tile.row;
+    const newColumn = columnDelta ? tile.column + columnDelta : tile.column;
+    const isValid: boolean = (newRow >= min && newRow <= max && newColumn >= min && newColumn <= max);
+    return isValid;
+  }
+
+  isTileAvailable(tile: Tile): boolean {
+    return tile.value === 0;
+  }
+
+  isTileAtEdgeOfBoard(tile: Tile): boolean {
+    return (
+      tile.column === 0 || tile.column === this.boardSize - 1 ||
+      tile.row === 0 || tile.row === this.boardSize - 1);
+  }
+
+  resetTiles(): void {
+    for (const row of this.board) {
+      row.forEach(tile => tile.merged = false);
     }
   }
 
-  moveDown(): void {
-    console.log('***** moveDown *****');
-    this.logger.logState(this.board);
-    let moveCount: number = 0;
-    for (let i = this.boardSize - 1; i >= 0; i--) {
-      for (let j = this.boardSize - 1; j >= 0; j--) {
-        let currentValue = this.board[i][j].value;
-        if (currentValue !== 0) {
-          for (let k = i + 1; k < this.boardSize; k++) {
-            if (this.board[k][j].value === currentValue) {
-              this.combineTiles(new Tile(k - 1, j, currentValue), new Tile(k, j));
-              moveCount++;
-            } else if (this.board[k][j].value === 0) {
-              this.moveTile(new Tile(k - 1, j, currentValue), new Tile(k, j));
-              moveCount++;
-            }
-            currentValue = this.board[k][j].value;
-          }
-        }
-      }
+  // Takes a single tile on the board and a direction, finds the next spot to move the tile to
+  // This can be one of three things:
+  // 1. The next non-empty tile in the direction specified
+  // 2. The board edge if there are no more tiles in that direction
+  // 3. null if the current tile is already at the board edge
+  getNextPosition(tile: Tile, direction: Direction): { lastEmptyPosition: Tile, tile: Tile } {
+    let current: Tile = tile;
+    let previous: Tile = tile;
+    do {
+      previous = current;
+      current = this.moveOneStep(current, direction);
+    } while (this.isValidTile(current) && this.isTileAvailable(current));
+
+    if (current === tile) {
+      current = null;
     }
-    if (moveCount > 0) {
-      console.log('moveCount: ' + moveCount);
-      this.logger.logState(this.board);
-      this.addTile();
+
+    if (current) {
+      console.log('    getNextTile. Direction: ' + direction, tile, current);
     }
+    return {
+      lastEmptyPosition: previous,
+      tile: current
+    };
   }
 
-  moveLeft(): void {
-    console.log('***** moveLeft *****');
+  // Main move method
+  // Interprets a user move up/down/left/right command
+  move(direction: Direction): void {
+    console.log('\r\n');
+    console.log('***** move ' + direction + ' *****');
     this.logger.logState(this.board);
-    let moveCount: number = 0;
-    for (let i = 0; i < this.boardSize; i++) {
-      for (let j = 0; j < this.boardSize; j++) {
-        let currentValue = this.board[i][j].value;
-        if (currentValue !== 0) {
-          for (let k = j - 1; k >= 0; k--) {
-            if (this.board[i][k].value === currentValue) {
-              this.combineTiles(new Tile(i, k + 1, currentValue), new Tile(i, k));
-              moveCount++;
-            } else if (this.board[i][k].value === 0) {
-              this.moveTile(new Tile(i, k + 1, currentValue), new Tile(i, k));
-              moveCount++;
-            }
-            currentValue = this.board[i][k].value;
-          }
-        }
+    let foundMove = false;
+    for (const row of this.board) {
+      const tilesToEvaluate: Tile[] = row.filter(tile => !this.isTileAvailable(tile));
+      if (direction === Direction.right || direction === Direction.down) {
+        // TODO: This works for left/right, but not up/down.
+        // Need to move to a stack approach? build the full list of tiles to process on either a row or column
+        // before we start.
+        console.log('Direction was right/up - inverting order of tiles to process');
+        tilesToEvaluate.reverse();
       }
+      tilesToEvaluate.forEach(current => {
+        console.log('Processing: ', current);
+        const next = this.getNextPosition(current, direction);
+        if (next.tile && next.tile !== current && current.value === next.tile.value && !next.tile.merged) {
+          this.combineTiles(current, next.tile);
+          foundMove = true;
+        } else if (next && next.tile !== current && this.isTileAvailable(next.lastEmptyPosition)) {
+          console.log('    Moving to last empty spot');
+          this.moveTile(current, next.lastEmptyPosition);
+          foundMove = true;
+        } else {
+          console.log('    Nothing to do for tile', current);
+        }
+      });
     }
-    if (moveCount > 0) {
-      console.log('moveCount: ' + moveCount);
-      this.logger.logState(this.board);
-      this.addTile();
-    }
-  }
 
-  moveRight(): void {
-    console.log('***** moveRight *****');
-    this.logger.logState(this.board);
-    let moveCount: number = 0;
-    for (let i = this.boardSize - 1; i >= 0; i--) {
-      for (let j = this.boardSize - 1; j >= 0; j--) {
-        let currentValue = this.board[i][j].value;
-        if (currentValue !== 0) {
-          for (let k = j + 1; k < this.boardSize; k++) {
-            if (this.board[i][k].value === currentValue) {
-              this.combineTiles(new Tile(i, k - 1, currentValue), new Tile(i, k));
-              moveCount++;
-            } else if (this.board[i][k].value === 0) {
-              this.moveTile(new Tile(i, k - 1, currentValue), new Tile(i, k));
-              moveCount++;
-            }
-            currentValue = this.board[i][k].value;
-          }
-        }
-      }
-    }
-    if (moveCount > 0) {
-      console.log('moveCount: ' + moveCount);
+    if (foundMove && !this.testMode) {
+      console.log('foundMove = true. New state:');
       this.logger.logState(this.board);
       this.addTile();
-    }    
+    }
+    this.resetTiles();
   }
 
   // Used to force a test case for debug purposes
-  // Set testOverride = true to get the board to read this config
+  // Set testMode = true to get the board to read this config
   initializeTestBoard(): void {
-    this.initializeEmptyBoard();
-
-    this.board[2][3].value = 2;
-    this.board[3][1].value = 4;
-    this.board[3][2].value = 32;
-    this.board[3][3].value = 4;
+    this.board[0][1].value = 2;
+    this.board[0][2].value = 2;
+    this.board[0][3].value = 2;
+    this.board[1][3].value = 8;
   }
-
 }

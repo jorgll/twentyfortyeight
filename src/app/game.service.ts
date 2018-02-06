@@ -154,26 +154,21 @@ export class GameService {
     return tile.value === 0;
   }
 
-  isTileAtEdgeOfBoard(tile: Tile): boolean {
-    return (
-      tile.column === 0 || tile.column === this.boardSize - 1 ||
-      tile.row === 0 || tile.row === this.boardSize - 1);
-  }
-
-  resetTiles(): void {
-    for (const row of this.board) {
+  resetTileMergeState(): void {
+    this.board.forEach(row => {
       row.forEach(tile => tile.merged = false);
-    }
+    });
   }
 
   // Takes a single tile on the board and a direction, finds the next spot to move the tile to
   //
-  // tile can return:
+  // tile contains:
   // 1. The next non-empty tile in the direction specified
   // 2. The board edge if there are no more tiles in that direction
   // 3. null if the current tile is already at the board edge
   //
   // lastEmptyPosition returns the last valid empty position before the next
+  //
   getNextPosition(tile: Tile, direction: Direction): { lastEmptyPosition: Tile, tile: Tile } {
     let current: Tile = tile;
     let previous: Tile = tile;
@@ -195,15 +190,28 @@ export class GameService {
     };
   }
 
-    // Get rows vs. columns of tiles to process
-    getTileGroups(direction: Direction): Tile[][] {
+  // Get rows vs. columns of tiles to process in order
+  getTileGroups(direction: Direction): Tile[][] {
     let tileGroups: Tile[][];
     if (direction === Direction.up || direction === Direction.down) {
+      // Process columns
       tileGroups = _.unzip(this.board);
     } else {
+      // Process rows
       tileGroups = this.board;
     }
     return tileGroups;
+  }
+
+  // Accepts a TileGroup (row or column with candidate tiles to process)
+  // Returns a filtered list of valid tiles ready to process moves on
+  getValidTiles(tileGroup: Tile[], direction: Direction): Tile[] {
+    const validTiles: Tile[] = tileGroup.filter(tile => !this.isTileAvailable(tile));
+    if (direction === Direction.right || direction === Direction.down) {
+      console.log('Direction was right/up - inverting order of tiles to process');
+      validTiles.reverse();
+    }
+    return validTiles;
   }
 
   // Main move method
@@ -214,35 +222,32 @@ export class GameService {
     this.logger.logState(this.board);
     let foundMove = false;
 
-    const tileGroups: Tile[][] = this.getTileGroups(direction);
-    for (const tileGroup of tileGroups) {
-      const tilesToEvaluate: Tile[] = tileGroup.filter(tile => !this.isTileAvailable(tile));
-      if (direction === Direction.right || direction === Direction.down) {
-        console.log('Direction was right/up - inverting order of tiles to process');
-        tilesToEvaluate.reverse();
-      }
-      tilesToEvaluate.forEach(current => {
-        console.log('Processing: ', current);
-        const next = this.getNextPosition(current, direction);
-        if (next.tile && next.tile !== current && current.value === next.tile.value && !next.tile.merged) {
-          this.combineTiles(current, next.tile);
-          foundMove = true;
-        } else if (next && next.tile !== current && this.isTileAvailable(next.lastEmptyPosition)) {
-          console.log('    Moving to last empty spot');
-          this.moveTile(current, next.lastEmptyPosition);
-          foundMove = true;
-        } else {
-          console.log('    Nothing to do for tile', current);
-        }
+    // Get a list of TileGroups and evaluate Tiles in each one
+    this.getTileGroups(direction)
+      .forEach(tileGroup => {
+        this.getValidTiles(tileGroup, direction)
+        .forEach(current => {
+          console.log('Processing: ', current);
+          const next = this.getNextPosition(current, direction);
+          if (next.tile && next.tile !== current && current.value === next.tile.value && !next.tile.merged) {
+            this.combineTiles(current, next.tile);
+            foundMove = true;
+          } else if (next && next.tile !== current && this.isTileAvailable(next.lastEmptyPosition)) {
+            console.log('    Moving to last empty spot');
+            this.moveTile(current, next.lastEmptyPosition);
+            foundMove = true;
+          } else {
+            console.log('    Nothing to do for tile', current);
+          }
       });
-    }
+    });
 
     if (foundMove && !this.testMode) {
       console.log('foundMove = true. New state:');
       this.logger.logState(this.board);
       this.addTile();
     }
-    this.resetTiles();
+    this.resetTileMergeState();
   }
 
   // Used to force a test case for debug purposes

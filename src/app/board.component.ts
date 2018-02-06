@@ -1,7 +1,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { GameService } from './game.service';
 import { Tile } from './tile.model';
- 
+
 @Component({
   selector: 'board',
   templateUrl: './board.component.html',

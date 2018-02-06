@@ -15,7 +15,7 @@ export class GameService {
   board: Tile[][];
   boardSize = 4; // NxN
   tileCount = 0;
-  testMode = true;
+  testMode = false;
   maxInitialTileCount = 4;
   Direction = Direction;
 
@@ -167,10 +167,13 @@ export class GameService {
   }
 
   // Takes a single tile on the board and a direction, finds the next spot to move the tile to
-  // This can be one of three things:
+  //
+  // tile can return:
   // 1. The next non-empty tile in the direction specified
   // 2. The board edge if there are no more tiles in that direction
   // 3. null if the current tile is already at the board edge
+  //
+  // lastEmptyPosition returns the last valid empty position before the next
   getNextPosition(tile: Tile, direction: Direction): { lastEmptyPosition: Tile, tile: Tile } {
     let current: Tile = tile;
     let previous: Tile = tile;
@@ -192,6 +195,17 @@ export class GameService {
     };
   }
 
+    // Get rows vs. columns of tiles to process
+    getTileGroups(direction: Direction): Tile[][] {
+    let tileGroups: Tile[][];
+    if (direction === Direction.up || direction === Direction.down) {
+      tileGroups = _.unzip(this.board);
+    } else {
+      tileGroups = this.board;
+    }
+    return tileGroups;
+  }
+
   // Main move method
   // Interprets a user move up/down/left/right command
   move(direction: Direction): void {
@@ -199,12 +213,11 @@ export class GameService {
     console.log('***** move ' + direction + ' *****');
     this.logger.logState(this.board);
     let foundMove = false;
-    for (const row of this.board) {
-      const tilesToEvaluate: Tile[] = row.filter(tile => !this.isTileAvailable(tile));
+
+    const tileGroups: Tile[][] = this.getTileGroups(direction);
+    for (const tileGroup of tileGroups) {
+      const tilesToEvaluate: Tile[] = tileGroup.filter(tile => !this.isTileAvailable(tile));
       if (direction === Direction.right || direction === Direction.down) {
-        // TODO: This works for left/right, but not up/down.
-        // Need to move to a stack approach? build the full list of tiles to process on either a row or column
-        // before we start.
         console.log('Direction was right/up - inverting order of tiles to process');
         tilesToEvaluate.reverse();
       }

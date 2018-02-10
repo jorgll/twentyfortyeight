@@ -2,8 +2,6 @@
 
 Playing around with a basic 2048 clone to test out Angular development.
 
-Also testing out Git :)
-
 ### Auto-generated Documentation
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 1.5.0.
